@@ -41,7 +41,7 @@
             </div>
 
             <div class="flex-grow space-y-5">
-                <!-- Nhập cấu hình API Key (Giải pháp khắc phục lỗi bảo mật khi đẩy lên GitHub) -->
+                <!-- Nhập cấu hình API Key -->
                 <div class="p-4 bg-yellow-50/50 dark:bg-yellow-950/10 border border-yellow-200 dark:border-yellow-900/50 rounded-2xl">
                     <label class="block text-xs font-bold uppercase mb-2 text-yellow-800 dark:text-yellow-400 flex justify-between items-center">
                         <span>Gemini API Key của bạn</span>
@@ -49,13 +49,20 @@
                             Lấy Key miễn phí <i class="fas fa-external-link-alt ml-1"></i>
                         </a>
                     </label>
-                    <div class="relative">
-                        <input id="api-key-input" type="password" class="w-full p-2.5 pr-10 border border-yellow-300 dark:border-yellow-900/50 rounded-xl bg-white dark:bg-blue-900 focus:ring-2 focus:ring-yellow-400 outline-none transition text-xs font-mono" placeholder="Nhập khóa AIzaSy...">
+                    <div class="relative mb-3">
+                        <input id="api-key-input" type="password" class="w-full p-2.5 pr-10 border border-yellow-300 dark:border-yellow-900/50 rounded-xl bg-white dark:bg-blue-900 focus:ring-2 focus:ring-yellow-400 outline-none transition text-xs font-mono text-blue-950 dark:text-white" placeholder="Nhập khóa AIzaSy...">
                         <button onclick="toggleApiKeyVisibility()" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">
                             <i id="eye-icon" class="fas fa-eye"></i>
                         </button>
                     </div>
-                    <p class="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5"><i class="fas fa-shield-alt mr-1"></i>Được lưu trữ an toàn trong LocalStorage trình duyệt của riêng bạn.</p>
+
+                    <!-- LỰA CHỌN MÔ HÌNH GENERATIVE AI -->
+                    <label class="block text-xs font-bold uppercase mb-1.5 text-yellow-800 dark:text-yellow-400">Mô hình tạo ảnh (Model)</label>
+                    <select id="model-select" class="w-full p-2 border border-yellow-300 dark:border-yellow-900/50 rounded-xl bg-white dark:bg-blue-900 font-medium text-xs text-blue-950 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400">
+                        <option value="gemini-2.5-flash-image-preview" selected>Gemini 2.5 Flash Image (Khuyên dùng - Miễn phí)</option>
+                        <option value="imagen-4.0-generate-001">Imagen 4.0 (Yêu cầu tài khoản trả phí)</option>
+                    </select>
+                    <p class="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5"><i class="fas fa-shield-alt mr-1"></i>Được lưu trữ bảo mật cục bộ tại trình duyệt của bạn.</p>
                 </div>
 
                 <!-- Nhập mô tả ảnh -->
@@ -121,7 +128,7 @@
                 <!-- Vùng Loading tải ảnh -->
                 <div id="loader" class="hidden text-center">
                     <div class="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin loader-spinner mx-auto mb-4"></div>
-                    <p class="text-yellow-500 font-bold text-lg animate-pulse">Imagen-4 đang vẽ bức tranh của bạn...</p>
+                    <p id="loader-text" class="text-yellow-500 font-bold text-lg animate-pulse">Đang vẽ bức tranh của bạn...</p>
                     <p class="text-xs text-gray-400 mt-2">Quá trình này mất khoảng vài giây</p>
                 </div>
                 
@@ -136,7 +143,7 @@
                         </button>
                         <button onclick="copyToClipboard()" class="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md flex items-center space-x-2 transition">
                             <i class="fas fa-copy"></i>
-                            <span>Sắp chép Link</span>
+                            <span>Sao chép Link</span>
                         </button>
                     </div>
                 </div>
@@ -163,7 +170,7 @@
                 icon.classList.add('text-yellow-500');
             } else {
                 input.type = 'password';
-                icon.classList.replace('fa-eye', 'fa-eye'); // icon vẫn là fa-eye nhưng đổi kiểu
+                icon.classList.replace('fa-eye', 'fa-eye');
                 icon.classList.remove('text-yellow-500');
             }
         }
@@ -192,7 +199,7 @@
             setTimeout(() => {
                 toast.classList.remove('translate-y-0');
                 toast.classList.add('translate-y-[-150%]');
-            }, 4000);
+            }, 5000);
         }
 
         // Tải ảnh về máy người dùng
@@ -255,9 +262,11 @@
             const style = document.getElementById('style-select').value;
             const placeholder = document.getElementById('placeholder');
             const loader = document.getElementById('loader');
+            const loaderText = document.getElementById('loader-text');
             const resultContainer = document.getElementById('result-container');
             const generatedImage = document.getElementById('generated-image');
             const generateBtn = document.getElementById('generate-btn');
+            const selectedModel = document.getElementById('model-select').value;
             
             // Đọc API Key từ input và lưu lại
             const apiKeyInput = document.getElementById('api-key-input').value.trim();
@@ -282,25 +291,53 @@
             generateBtn.disabled = true;
             generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKeyInput}`;
+            if (selectedModel === 'gemini-2.5-flash-image-preview') {
+                loaderText.innerText = "Gemini 2.5 Flash đang vẽ tranh...";
+            } else {
+                loaderText.innerText = "Imagen 4.0 đang vẽ tranh...";
+            }
 
+            try {
+                let apiUrl = "";
+                let payload = {};
+                let isPredictEndpoint = false;
+                
                 // Tổng hợp prompt chi tiết kết hợp phong cách và tỷ lệ
                 const finalPrompt = `${prompt}, style of ${style}, dynamic lighting, high resolution, 8k`;
 
-                // Cấu trúc payload chuẩn cho imagen-4.0-generate-001
-                const payload = {
-                    instances: [
-                        {
-                            prompt: finalPrompt
+                if (selectedModel === 'imagen-4.0-generate-001') {
+                    // Cấu trúc endpoint Predict của Imagen-4
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKeyInput}`;
+                    payload = {
+                        instances: [
+                            {
+                                prompt: finalPrompt
+                            }
+                        ],
+                        parameters: {
+                            sampleCount: 1,
+                            aspectRatio: selectedAspectRatio,
+                            outputMimeType: "image/png"
                         }
-                    ],
-                    parameters: {
-                        sampleCount: 1,
-                        aspectRatio: selectedAspectRatio,
-                        outputMimeType: "image/png"
-                    }
-                };
+                    };
+                    isPredictEndpoint = true;
+                } else {
+                    // Cấu trúc endpoint generateContent của Gemini 2.5 Flash Image
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKeyInput}`;
+                    payload = {
+                        contents: [
+                            {
+                                parts: [
+                                    { text: finalPrompt }
+                                ]
+                            }
+                        ],
+                        generationConfig: {
+                            responseModalities: ["IMAGE"]
+                        }
+                    };
+                    isPredictEndpoint = false;
+                }
                 
                 const result = await fetchWithRetry(apiUrl, {
                     method: 'POST',
@@ -308,11 +345,21 @@
                     body: JSON.stringify(payload)
                 });
                 
-                // Trích xuất mã hóa ảnh Base64 trả về từ API
-                const base64Bytes = result?.predictions?.[0]?.bytesBase64Encoded;
+                let base64Bytes = "";
+                let mimeType = "image/png";
+
+                if (isPredictEndpoint) {
+                    base64Bytes = result?.predictions?.[0]?.bytesBase64Encoded;
+                } else {
+                    const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                    if (part) {
+                        base64Bytes = part.inlineData.data;
+                        mimeType = part.inlineData.mimeType || "image/png";
+                    }
+                }
                 
                 if (base64Bytes) {
-                    generatedImage.src = `data:image/png;base64,${base64Bytes}`;
+                    generatedImage.src = `data:${mimeType};base64,${base64Bytes}`;
                     resultContainer.classList.remove('hidden');
                 } else {
                     throw new Error("Phản hồi từ AI không chứa dữ liệu hình ảnh hợp lệ.");
@@ -320,7 +367,12 @@
             } catch (err) {
                 console.error(err);
                 placeholder.classList.remove('hidden');
-                showToast(err.message || "Đã xảy ra lỗi không xác định!");
+                
+                let userFriendlyError = err.message;
+                if (err.message && err.message.includes("billing") || err.message.includes("paid plans")) {
+                    userFriendlyError = "Mô hình Imagen 4 yêu cầu nâng cấp gói trả phí. Bạn hãy đổi sang mô hình 'Gemini 2.5 Flash Image' miễn phí ở menu bên trái nhé!";
+                }
+                showToast(userFriendlyError || "Đã xảy ra lỗi không xác định!");
             } finally {
                 loader.classList.add('hidden');
                 generateBtn.disabled = false;
