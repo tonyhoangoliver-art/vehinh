@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio Sáng Tạo AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .option-btn { transition: all 0.2s ease; border: 2px solid #e2e8f0; }
+        .option-btn.selected { border-color: #fbbf24; background-color: #fef3c7; color: #92400e; font-weight: 600; }
+        html.dark .option-btn { border-color: #1e3a8a; }
+        html.dark .option-btn.selected { background-color: #451a03; border-color: #fbbf24; color: #fbbf24; }
+        .loader-spinner { border-top-color: #fbbf24; }
+    </style>
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+</head>
+<body class="bg-white dark:bg-black text-blue-950 dark:text-blue-50 transition-colors duration-300">
+
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+        <aside class="w-full md:w-[400px] bg-white dark:bg-blue-950 border-r border-blue-100 dark:border-blue-900 p-6 flex flex-col shadow-xl overflow-y-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-xl font-bold uppercase tracking-wider text-blue-900 dark:text-yellow-400">Studio AI</h1>
+                <button id="theme-toggle" class="h-10 w-10 flex items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900 hover:bg-yellow-100 dark:hover:bg-yellow-900 transition">
+                    <i class="fas fa-sun dark:hidden"></i>
+                    <i class="fas fa-moon hidden dark:block"></i>
+                </button>
+            </div>
+
+            <div class="flex-grow space-y-6">
+                <div>
+                    <label class="block text-sm font-bold uppercase mb-3 opacity-70">Mô tả hình ảnh</label>
+                    <textarea id="prompt-input" rows="4" class="w-full p-4 border border-blue-200 dark:border-blue-800 rounded-xl bg-gray-50 dark:bg-blue-900 focus:ring-2 focus:ring-yellow-400 outline-none transition" placeholder="Ví dụ: Một chú mèo phi hành gia trên sao Hỏa..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold uppercase mb-3 opacity-70">Phong cách nghệ thuật</label>
+                    <select id="style-select" class="w-full p-3 border border-blue-200 dark:border-blue-800 rounded-xl bg-white dark:bg-blue-900 font-medium">
+                        <option value="Photorealistic" selected>Ảnh chân thực (Photorealistic)</option>
+                        <option value="Anime">Anime Nhật Bản</option>
+                        <option value="Oil Painting">Tranh sơn dầu</option>
+                        <option value="Digital Art">Nghệ thuật số</option>
+                        <option value="Watercolor">Tranh màu nước</option>
+                        <option value="Pencil Sketch">Phác thảo chì</option>
+                        <option value="Cyberpunk">Cyberpunk</option>
+                        <option value="3D Animation">Hoạt hình 3D</option>
+                        <option value="Historical Costume">Cổ trang</option>
+                        <option value="Mythology">Thần thoại</option>
+                        <option value="Minimalism">Phong cách tối giản</option>
+                        <option value="Pop Art">Pop Art</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold uppercase mb-2 opacity-70">Tỷ lệ khung hình</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="option-btn selected p-2 rounded-lg border text-sm" onclick="selectOption(this)">1:1</button>
+                        <button class="option-btn p-2 rounded-lg border text-sm" onclick="selectOption(this)">16:9</button>
+                        <button class="option-btn p-2 rounded-lg border text-sm" onclick="selectOption(this)">9:16</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-blue-100 dark:border-blue-900">
+                <button id="generate-btn" onclick="generateImage()" class="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98]">
+                    <i class="fas fa-magic mr-2"></i>Tạo Ảnh Ngay
+                </button>
+                <div class="mt-6 text-center text-[10px] text-gray-400 uppercase tracking-widest font-semibold">
+                    Thiết kế bởi Hoàng Kim Long @2026
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-6 md:p-12 overflow-y-auto bg-gray-50 dark:bg-black">
+            <div id="image-display-area" class="h-full w-full rounded-3xl border-2 border-dashed border-blue-200 dark:border-blue-800 flex flex-col items-center justify-center p-8 bg-white/50 dark:bg-blue-950/20 relative overflow-hidden">
+                <div id="placeholder" class="text-center">
+                    <div class="text-6xl text-blue-200 dark:text-blue-800 mb-6">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-blue-950 dark:text-white">Sẵn sàng để sáng tạo?</h2>
+                    <p class="text-blue-500 mt-2">Nhập yêu cầu và nhấn nút tạo ảnh</p>
+                </div>
+                
+                <div id="loader" class="hidden text-center">
+                    <div class="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin loader-spinner mx-auto mb-4"></div>
+                    <p class="text-yellow-500 font-bold">Nano Banana đang kiến tạo tác phẩm...</p>
+                </div>
+                
+                <div id="result-container" class="hidden w-full h-full flex items-center justify-center">
+                    <img id="generated-image" src="" alt="Result" class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        function selectOption(btn) {
+            btn.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+
+        async function generateImage() {
+            const prompt = document.getElementById('prompt-input').value;
+            const style = document.getElementById('style-select').value;
+            const placeholder = document.getElementById('placeholder');
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('result-container');
+            const generatedImage = document.getElementById('generated-image');
+
+            if (!prompt) {
+                alert("Vui lòng nhập mô tả hình ảnh!");
+                return;
+            }
+
+            placeholder.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            loader.classList.remove('hidden');
+
+            try {
+                const payload = {
+                    contents: [{
+                        role: 'user',
+                        parts: [{ text: `${prompt}, phong cách ${style}` }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ['IMAGE']
+                    },
+                };
+                
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                
+                if (part) {
+                    generatedImage.src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                    resultContainer.classList.remove('hidden');
+                } else {
+                    throw new Error("Không thể tạo ảnh, vui lòng thử lại.");
+                }
+            } catch (err) {
+                console.error(err);
+                placeholder.classList.remove('hidden');
+                placeholder.innerHTML = `<h2 class="text-xl font-bold text-red-500">Lỗi!</h2><p class="text-gray-500">${err.message}</p>`;
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
