@@ -32,7 +32,7 @@
     <div class="flex flex-col md:flex-row h-screen overflow-hidden">
         <!-- Sidebar điều khiển bên trái -->
         <aside class="w-full md:w-[400px] bg-white dark:bg-blue-950 border-r border-blue-100 dark:border-blue-900 p-6 flex flex-col shadow-xl overflow-y-auto">
-            <div class="flex justify-between items-center mb-8">
+            <div class="flex justify-between items-center mb-6">
                 <h1 class="text-xl font-bold uppercase tracking-wider text-blue-900 dark:text-yellow-400">Studio AI</h1>
                 <button id="theme-toggle" class="h-10 w-10 flex items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900 hover:bg-yellow-100 dark:hover:bg-yellow-900 transition">
                     <i class="fas fa-sun dark:hidden"></i>
@@ -40,16 +40,33 @@
                 </button>
             </div>
 
-            <div class="flex-grow space-y-6">
+            <div class="flex-grow space-y-5">
+                <!-- Nhập cấu hình API Key (Giải pháp khắc phục lỗi bảo mật khi đẩy lên GitHub) -->
+                <div class="p-4 bg-yellow-50/50 dark:bg-yellow-950/10 border border-yellow-200 dark:border-yellow-900/50 rounded-2xl">
+                    <label class="block text-xs font-bold uppercase mb-2 text-yellow-800 dark:text-yellow-400 flex justify-between items-center">
+                        <span>Gemini API Key của bạn</span>
+                        <a href="https://aistudio.google.com/" target="_blank" class="text-[10px] text-blue-600 dark:text-yellow-300 hover:underline flex items-center">
+                            Lấy Key miễn phí <i class="fas fa-external-link-alt ml-1"></i>
+                        </a>
+                    </label>
+                    <div class="relative">
+                        <input id="api-key-input" type="password" class="w-full p-2.5 pr-10 border border-yellow-300 dark:border-yellow-900/50 rounded-xl bg-white dark:bg-blue-900 focus:ring-2 focus:ring-yellow-400 outline-none transition text-xs font-mono" placeholder="Nhập khóa AIzaSy...">
+                        <button onclick="toggleApiKeyVisibility()" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">
+                            <i id="eye-icon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <p class="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5"><i class="fas fa-shield-alt mr-1"></i>Được lưu trữ an toàn trong LocalStorage trình duyệt của riêng bạn.</p>
+                </div>
+
                 <!-- Nhập mô tả ảnh -->
                 <div>
-                    <label class="block text-sm font-bold uppercase mb-3 opacity-70">Mô tả hình ảnh</label>
+                    <label class="block text-sm font-bold uppercase mb-2 opacity-70">Mô tả hình ảnh</label>
                     <textarea id="prompt-input" rows="4" class="w-full p-4 border border-blue-200 dark:border-blue-800 rounded-xl bg-gray-50 dark:bg-blue-900 focus:ring-2 focus:ring-yellow-400 outline-none transition" placeholder="Ví dụ: Một chú mèo phi hành gia trên sao Hỏa phát sáng rực rỡ..."></textarea>
                 </div>
 
                 <!-- Lựa chọn phong cách -->
                 <div>
-                    <label class="block text-sm font-bold uppercase mb-3 opacity-70">Phong cách nghệ thuật</label>
+                    <label class="block text-sm font-bold uppercase mb-2 opacity-70">Phong cách nghệ thuật</label>
                     <select id="style-select" class="w-full p-3 border border-blue-200 dark:border-blue-800 rounded-xl bg-white dark:bg-blue-900 font-medium">
                         <option value="Photorealistic" selected>Ảnh chân thực (Photorealistic)</option>
                         <option value="Anime">Anime Nhật Bản</option>
@@ -78,11 +95,11 @@
             </div>
 
             <!-- Nút tạo ảnh -->
-            <div class="mt-8 pt-6 border-t border-blue-100 dark:border-blue-900">
+            <div class="mt-6 pt-4 border-t border-blue-100 dark:border-blue-900">
                 <button id="generate-btn" onclick="generateImage()" class="w-full bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-bold py-4 rounded-xl shadow-lg transition transform active:scale-[0.98]">
                     <i class="fas fa-magic mr-2"></i>Tạo Ảnh Ngay
                 </button>
-                <div class="mt-6 text-center text-[10px] text-gray-400 uppercase tracking-widest font-semibold">
+                <div class="mt-4 text-center text-[10px] text-gray-400 uppercase tracking-widest font-semibold">
                     Thiết kế bởi Hoàng Kim Long @2026
                 </div>
             </div>
@@ -119,7 +136,7 @@
                         </button>
                         <button onclick="copyToClipboard()" class="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md flex items-center space-x-2 transition">
                             <i class="fas fa-copy"></i>
-                            <span>Sao chép Link</span>
+                            <span>Sắp chép Link</span>
                         </button>
                     </div>
                 </div>
@@ -128,6 +145,29 @@
     </div>
 
     <script>
+        // Khi tải trang: Nạp lại API key cũ từ localStorage nếu có
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
+            }
+        });
+
+        // Ẩn / Hiện API Key
+        function toggleApiKeyVisibility() {
+            const input = document.getElementById('api-key-input');
+            const icon = document.getElementById('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye');
+                icon.classList.add('text-yellow-500');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye', 'fa-eye'); // icon vẫn là fa-eye nhưng đổi kiểu
+                icon.classList.remove('text-yellow-500');
+            }
+        }
+
         // Bật tắt chủ đề tối/sáng (Dark mode)
         document.getElementById('theme-toggle').addEventListener('click', () => {
             const isDark = document.documentElement.classList.toggle('dark');
@@ -194,6 +234,11 @@
                     const response = await fetch(url, options);
                     if (response.ok) {
                         return await response.json();
+                    } else {
+                        const errData = await response.json().catch(() => ({}));
+                        if (errData?.error?.message) {
+                            throw new Error(errData.error.message);
+                        }
                     }
                 } catch (err) {
                     if (i === maxRetries - 1) throw err;
@@ -213,6 +258,17 @@
             const resultContainer = document.getElementById('result-container');
             const generatedImage = document.getElementById('generated-image');
             const generateBtn = document.getElementById('generate-btn');
+            
+            // Đọc API Key từ input và lưu lại
+            const apiKeyInput = document.getElementById('api-key-input').value.trim();
+            if (apiKeyInput) {
+                localStorage.setItem('gemini_api_key', apiKeyInput);
+            }
+
+            if (!apiKeyInput) {
+                showToast("Vui lòng cấu hình Gemini API Key trước khi tạo ảnh!");
+                return;
+            }
 
             if (!prompt) {
                 showToast("Vui lòng nhập mô tả hình ảnh trước khi bắt đầu tạo!");
@@ -227,8 +283,7 @@
             generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                const apiKey = ""; // API Key được xử lý an toàn tại runtime bởi môi trường Canvas
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKeyInput}`;
 
                 // Tổng hợp prompt chi tiết kết hợp phong cách và tỷ lệ
                 const finalPrompt = `${prompt}, style of ${style}, dynamic lighting, high resolution, 8k`;
@@ -242,7 +297,7 @@
                     ],
                     parameters: {
                         sampleCount: 1,
-                        aspectRatio: selectedAspectRatio, // Truyền trực tiếp tỷ lệ như "1:1", "16:9", hoặc "9:16"
+                        aspectRatio: selectedAspectRatio,
                         outputMimeType: "image/png"
                     }
                 };
