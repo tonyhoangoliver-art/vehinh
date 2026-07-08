@@ -59,7 +59,9 @@
                     <!-- LỰA CHỌN MÔ HÌNH GENERATIVE AI -->
                     <label class="block text-xs font-bold uppercase mb-1.5 text-yellow-800 dark:text-yellow-400">Mô hình tạo ảnh (Model)</label>
                     <select id="model-select" class="w-full p-2 border border-yellow-300 dark:border-yellow-900/50 rounded-xl bg-white dark:bg-blue-900 font-medium text-xs text-blue-950 dark:text-white outline-none focus:ring-2 focus:ring-yellow-400">
-                        <option value="gemini-2.5-flash-image-preview" selected>Gemini 2.5 Flash Image (Khuyên dùng - Miễn phí)</option>
+                        <option value="gemini-3.1-flash-lite-image" selected>Gemini 3.1 Flash-Lite (Tốc độ & Tiết kiệm)</option>
+                        <option value="gemini-3.1-flash-image">Gemini 3.1 Flash (Độ nét & Chi tiết)</option>
+                        <option value="gemini-3-pro-image">Gemini 3 Pro (Vẽ chữ & Chuyên nghiệp)</option>
                         <option value="imagen-4.0-generate-001">Imagen 4.0 (Yêu cầu tài khoản trả phí)</option>
                     </select>
                     <p class="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5"><i class="fas fa-shield-alt mr-1"></i>Được lưu trữ bảo mật cục bộ tại trình duyệt của bạn.</p>
@@ -199,7 +201,7 @@
             setTimeout(() => {
                 toast.classList.remove('translate-y-0');
                 toast.classList.add('translate-y-[-150%]');
-            }, 5000);
+            }, 6000);
         }
 
         // Tải ảnh về máy người dùng
@@ -291,10 +293,10 @@
             generateBtn.disabled = true;
             generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
-            if (selectedModel === 'gemini-2.5-flash-image-preview') {
-                loaderText.innerText = "Gemini 2.5 Flash đang vẽ tranh...";
+            if (selectedModel.includes('gemini')) {
+                loaderText.innerText = "Gemini 3 đang vẽ bức tranh của bạn...";
             } else {
-                loaderText.innerText = "Imagen 4.0 đang vẽ tranh...";
+                loaderText.innerText = "Imagen 4.0 đang vẽ bức tranh của bạn...";
             }
 
             try {
@@ -302,7 +304,7 @@
                 let payload = {};
                 let isPredictEndpoint = false;
                 
-                // Tổng hợp prompt chi tiết kết hợp phong cách và tỷ lệ
+                // Tổng hợp prompt chi tiết kết hợp phong cách
                 const finalPrompt = `${prompt}, style of ${style}, dynamic lighting, high resolution, 8k`;
 
                 if (selectedModel === 'imagen-4.0-generate-001') {
@@ -322,8 +324,8 @@
                     };
                     isPredictEndpoint = true;
                 } else {
-                    // Cấu trúc endpoint generateContent của Gemini 2.5 Flash Image
-                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKeyInput}`;
+                    // Cấu trúc endpoint generateContent của Gemini 3 Image Models (Nano Banana 2)
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKeyInput}`;
                     payload = {
                         contents: [
                             {
@@ -333,7 +335,10 @@
                             }
                         ],
                         generationConfig: {
-                            responseModalities: ["IMAGE"]
+                            responseModalities: ["TEXT", "IMAGE"],
+                            imageConfig: {
+                                aspectRatio: selectedAspectRatio
+                            }
                         }
                     };
                     isPredictEndpoint = false;
@@ -369,8 +374,9 @@
                 placeholder.classList.remove('hidden');
                 
                 let userFriendlyError = err.message;
-                if (err.message && err.message.includes("billing") || err.message.includes("paid plans")) {
-                    userFriendlyError = "Mô hình Imagen 4 yêu cầu nâng cấp gói trả phí. Bạn hãy đổi sang mô hình 'Gemini 2.5 Flash Image' miễn phí ở menu bên trái nhé!";
+                // Nhận diện lỗi tài khoản chưa liên kết thanh toán (Paid Plan/GCP Billing)
+                if (err.message && (err.message.includes("billing") || err.message.includes("paid plans") || err.message.includes("quota") || err.message.includes("429"))) {
+                    userFriendlyError = "Tài khoản API Key của bạn cần được bật thanh toán (Billing) trên Google Cloud Console để sinh ảnh bằng API. Hãy nâng cấp tài khoản của bạn để dùng tính năng vẽ hình này nhé!";
                 }
                 showToast(userFriendlyError || "Đã xảy ra lỗi không xác định!");
             } finally {
